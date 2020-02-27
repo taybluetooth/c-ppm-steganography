@@ -12,9 +12,8 @@ struct PPM {
 };
 
 struct PPM getPPM(FILE * f) {
-  struct PPM p;
-  RGB pixels;
-  p.max = 255;
+  PPM p;
+  p = (struct p *) malloc(sizeof(struct p));
 
   f = fopen("star-field-ascii.ppm", "r");
   fscanf(f, "%d", &p.height);
@@ -35,7 +34,5 @@ char * decode(struct PPM * im, unsigned int secret) {
 };*/
 
 int main(int argc, char *argv[]) {
-  FILE * f;
   fprintf(stderr, "%s\n", "Stenagography Program");
-  getPPM(f);
 };
