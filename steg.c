@@ -64,7 +64,7 @@ struct PPM getPPM(FILE * f) {
   HEADER header = getHeader(f);
 	PPM* image = getPixels(f, header);
 
-  ppm = &image;
+  ppm = image;
 
   fprintf(stderr, "%s\n", "PPM Structure Successfully Populated");
 
@@ -72,11 +72,24 @@ struct PPM getPPM(FILE * f) {
 
 };
 
-/*showPPM(struct PPM * im) {
+showPPM(struct PPM * im) {
+
+  int i = 0;
+  int j = 0;
+  HEADER header = im -> header;
+
+  fprintf(stderr, "P3\n%i ", header.width);
+  fprintf(stderr, "%i\n%i\n", header.height, header.max);
+
+  for(i = 0; i < header.height; i++){
+		for(j = 0; j < header.width; j++){
+			fprintf(stderr,"%u %u %u\n", im->pixels[i][j].r,  im->pixels[i][j].g,  im->pixels[i][j].b);
+		};
+	};
 
 };
 
-struct PPM * encode(struct PPM * im, char * message, unsigned int mSize, unsigned intsecret) {
+/*struct PPM * encode(struct PPM * im, char * message, unsigned int mSize, unsigned intsecret) {
 
 };
 
@@ -86,6 +99,7 @@ char * decode(struct PPM * im, unsigned int secret) {
 
 int main(int argc, char *argv[]) {
   FILE* f = fopen(argv[1], "r");
+  PPM ppm = getPPM(f);
   fprintf(stderr, "%s\n", "Stenagography Program");
-  getPPM(f);
+  showPPM(&ppm);
 };
