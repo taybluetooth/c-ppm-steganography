@@ -6,25 +6,70 @@ typedef struct PIXEL {
   unsigned int r, g, b;
 } PIXEL;
 
-typedef struct PPM {
+typedef struct HEADER {
   char format[3];
   int width;
   int height;
   int max;
+} HEADER;
+
+typedef struct PPM {
+  HEADER header;
+  PIXEL** pixels;
 } PPM;
 
-typedef struct IMAGE {
-  PPM ppm;
-  PIXEL** pixels;
-} IMAGE;
+PPM* mem_alloc(HEADER header){ //take header info to allocate memory for the new files
 
-struct PPM getPPM(FILE * f) {
+	int i = 0;
+	PPM* image = (PPM *)malloc(sizeof(PPM));
 
-  struct PPM header;
+	PIXEL** pixels = (PIXEL **)malloc(header.height * sizeof(PIXEL *));
+	for(i = 0; i < header.height; i++){
+		pixels[i] = (PIXEL *)malloc(header.width * sizeof(PIXEL));
+	}
+
+	image->pixels = pixels;
+	return image;
+}
+
+struct HEADER getHeader(FILE * f) {
+  struct HEADER header;
   fscanf(f, "%s %i ", header.format, &header.width);
   fscanf(f, "%i %i ", &header.height, &header.max);
 
   return header;
+}
+
+PPM* getPixels(FILE* f, HEADER header) {
+  int i = 0;
+	int j = 0;
+  PPM* image = mem_alloc(header); //calls the allocation function
+	memcpy(&(image->header), &header, sizeof(header)); //populate the image pointer with the header data.
+
+  for(i = 0; i < header.height; i++){
+		for(j = 0; j < header.width; j++){
+			fscanf(f, "%u", &image->pixels[i][j].r);
+			fscanf(f, "%u", &image->pixels[i][j].g);
+			fscanf(f, "%u", &image->pixels[i][j].b);
+		};
+	};
+
+	return image;
+};
+
+struct PPM getPPM(FILE * f) {
+
+  struct PPM *ppm;
+
+  HEADER header = getHeader(f);
+	PPM* image = getPixels(f, header);
+
+  ppm = &image;
+
+  fprintf(stderr, "%s\n", "PPM Structure Successfully Populated");
+
+	return *ppm; //image pointer return
+
 };
 
 /*showPPM(struct PPM * im) {
