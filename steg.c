@@ -72,20 +72,27 @@ struct PPM getPPM(FILE * f) {
 
 };
 
-showPPM(struct PPM * im) {
+int showPPM(struct PPM * im) {
 
   int i = 0;
   int j = 0;
   HEADER header = im -> header;
+  FILE* f = fopen("PPMConvert.txt", "w");
 
-  fprintf(stderr, "P3\n%i ", header.width);
-  fprintf(stderr, "%i\n%i\n", header.height, header.max);
+  fprintf(f, "P3\n%i ", header.width);
+  fprintf(f, "%i\n%i\n", header.height, header.max);
 
   for(i = 0; i < header.height; i++){
 		for(j = 0; j < header.width; j++){
-			fprintf(stderr,"%u %u %u\n", im->pixels[i][j].r,  im->pixels[i][j].g,  im->pixels[i][j].b);
+			fprintf(f,"%u %u %u\n", im->pixels[i][j].r,  im->pixels[i][j].g,  im->pixels[i][j].b);
 		};
 	};
+
+  fprintf(stderr, "%s\n", (char *) "Successfully Converted PPM to Text");
+  fprintf(stderr, "%s\n", (char *) "Stored in File - PPMConvert.txt");
+
+
+  return 0;
 
 };
 
@@ -102,4 +109,6 @@ int main(int argc, char *argv[]) {
   PPM ppm = getPPM(f);
   fprintf(stderr, "%s\n", "Stenagography Program");
   showPPM(&ppm);
+  fclose(f);
+  return 0;
 };
