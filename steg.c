@@ -2,9 +2,19 @@
 #include <stdlib.h>
 #include <string.h>
 
+/*
+  A structure that will hold an rgb pixel of
+  max value 255.
+*/
+
 typedef struct PIXEL {
   unsigned int r, g, b;
 } PIXEL;
+
+/*
+  A structure that holds the PPM header, outlining
+  all important information of the file.
+*/
 
 typedef struct HEADER {
   char format[3];
@@ -13,13 +23,23 @@ typedef struct HEADER {
   int max;
 } HEADER;
 
+/*
+  Combined structure of PPM file that holds both
+  the header and an array of all pixels in the file.
+*/
+
 typedef struct PPM {
   HEADER header;
   PIXEL** pixels;
 } PPM;
 
-PPM* mem_alloc(HEADER header){ //take header info to allocate memory for the new files
+/*
+  Additional function which allocates memory corresponding
+  to the size of the completed header to the final PPM image,
+  then allocating each pixel into the array.
+*/
 
+PPM* mem_alloc(HEADER header){
 	int i = 0;
 	PPM* image = (PPM *)malloc(sizeof(PPM));
 
@@ -32,6 +52,11 @@ PPM* mem_alloc(HEADER header){ //take header info to allocate memory for the new
 	return image;
 }
 
+/*
+  Function which reads in the header of the PPM file and assigns it
+  to the pre-defined Header struct, returning said header.
+*/
+
 struct HEADER getHeader(FILE * f) {
   struct HEADER header;
   fscanf(f, "%s %i ", header.format, &header.width);
@@ -39,6 +64,12 @@ struct HEADER getHeader(FILE * f) {
 
   return header;
 }
+
+/*
+  Method which gets all pixels from the PPM file, and within a loop, allocates
+  each pixel to an index of the pixel array, while utilising the memory allocation
+  function I created.
+*/
 
 PPM* getPixels(FILE* f, HEADER header) {
   int i = 0;
@@ -57,6 +88,11 @@ PPM* getPixels(FILE* f, HEADER header) {
 	return image;
 };
 
+/*
+  Method which returns the fully completed PPM structure after calling
+  both helper functions.
+*/
+
 struct PPM getPPM(FILE * f) {
 
   struct PPM *ppm;
@@ -71,6 +107,11 @@ struct PPM getPPM(FILE * f) {
 	return *ppm; //image pointer return
 
 };
+
+/*
+  Method which returns the PPM file in a text format,
+  storing it in a text file for easier viewing and analysis.
+*/
 
 int showPPM(struct PPM * im) {
 
@@ -103,6 +144,10 @@ int showPPM(struct PPM * im) {
 char * decode(struct PPM * im, unsigned int secret) {
 
 };*/
+
+/*
+  Main method which calls PPM functions for usage.
+*/
 
 int main(int argc, char *argv[]) {
   FILE* f = fopen(argv[1], "r");
