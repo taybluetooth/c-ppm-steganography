@@ -18,6 +18,7 @@ typedef struct PIXEL {
 
 typedef struct HEADER {
   char format[3];
+  char comment;
   int width;
   int height;
   int max;
@@ -59,8 +60,39 @@ PPM* mem_alloc(HEADER header){
 
 struct HEADER getHeader(FILE * f) {
   struct HEADER header;
-  fscanf(f, "%s %i ", header.format, &header.width);
-  fscanf(f, "%i %i ", &header.height, &header.max);
+  int c;
+  char buffer[18];
+
+  /*
+    Read in file format P3.
+  */
+
+  if (!fgets(buffer, sizeof(buffer), f)) {
+    exit(1);
+  }
+
+  /*
+    Ignore all comments that start with '#'.
+  */
+
+  c = getc(f);
+  while (c == '#') {
+  while (getc(f) != '\n') ;
+    c = getc(f);
+  }
+
+  /*
+    Once line ends with no more #, unassign the character and continue
+    reading file.
+  */
+
+  ungetc(c, f);
+
+  /*
+    Read in header information of PPM file.
+  */
+
+  fscanf(f, "%i %i %i", &header.width, &header.height, &header.max);
 
   return header;
 }
@@ -120,8 +152,8 @@ int showPPM(struct PPM * im) {
   HEADER header = im -> header;
   FILE* f = fopen("PPMConvert.txt", "w");
 
-  fprintf(f, "P3\n%i ", header.width);
-  fprintf(f, "%i\n%i\n", header.height, header.max);
+  fprintf(f, "P3\n");
+  fprintf(f, "%i %i\n%i\n", header.width, header.height, header.max);
 
   for(i = 0; i < header.height; i++){
 		for(j = 0; j < header.width; j++){
@@ -131,7 +163,6 @@ int showPPM(struct PPM * im) {
 
   fprintf(stderr, "%s\n", (char *) "Successfully Converted PPM to Text");
   fprintf(stderr, "%s\n", (char *) "Stored in File - PPMConvert.txt");
-
 
   return 0;
 
