@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 /*
   A structure that will hold an rgb pixel of
@@ -150,31 +151,109 @@ int showPPM(struct PPM * im) {
   int i = 0;
   int j = 0;
   HEADER header = im -> header;
-  FILE* f = fopen("PPMConvert.txt", "w");
 
-  fprintf(f, "P3\n");
-  fprintf(f, "%i %i\n%i\n", header.width, header.height, header.max);
+  fprintf(stderr, "P3\n");
+  fprintf(stderr, "%i %i\n%i\n", header.width, header.height, header.max);
 
   for(i = 0; i < header.height; i++){
 		for(j = 0; j < header.width; j++){
-			fprintf(f,"%u %u %u\n", im->pixels[i][j].r,  im->pixels[i][j].g,  im->pixels[i][j].b);
+			fprintf(stderr,"%u %u %u\n", im->pixels[i][j].r,  im->pixels[i][j].g,  im->pixels[i][j].b);
 		};
 	};
 
   fprintf(stderr, "%s\n", (char *) "Successfully Converted PPM to Text");
-  fprintf(stderr, "%s\n", (char *) "Stored in File - PPMConvert.txt");
 
   return 0;
 
 };
 
-/*struct PPM * encode(struct PPM * im, char * message, unsigned int mSize, unsigned intsecret) {
+void writePPM(FILE * f, struct PPM * im){
+	FILE *output = NULL;
+	int i,j;
+
+	output = fopen("ppm-conversion", "w");
+	fprintf(output, "P3\n%d %d\n255\n", im->header.width, im->header.height);
+
+	for(i=0; i<im->header.height; i++) {
+		for(j=0; j<im->header.width;j++){
+			fprintf(output, "%i %i %i \n", im->pixels[i][j].r, im->pixels[i][j].g, im->pixels[i][j].b);
+    }
+	}
+  fprintf(stderr, "%s\n", (char *) "Stored in File - ppm-conversion.txt");
+	fclose(output);
+}
+
+struct PPM * encode(struct PPM * im, char * message, unsigned int mSize, unsigned int secret) {
+
+  srand(time(NULL)); // randomize seed being set to the current time for pixel placement.
+
+  int i, random, width, sum;
+
+  sum = 0;
+  width = im->header.width;
+
+  if((mSize * 75) < (width * im->header.height)){
+    printf("steg: File is appropriate for encoding. \n");
+  }
+  else {
+    printf("steg: Error- Image size not acceptable. \n");
+    exit(0);
+  }
+
+  //for each char
+  for (i=0;i<mSize;) {
+         random = (rand() % 100);
+         sum = sum + random;
+         int row, column;
+         row = sum / (width);
+         column = sum - (row * width);
+
+         //get pixel
+         struct PIXEL * p = &(im->pixels[row][column]); //Use memory address
+
+         //check red pixel val != asci of letter encoded
+         if(message[i] != p->r){
+           p->r = message[i];
+           i++;
+         }
+         else {
+           fprintf(stderr, "char [%i] - [%c] same. Retrying. \n", i, message[i]);
+        }
+  }
+
+  return i;
 
 };
 
+/*
 char * decode(struct PPM * im, unsigned int secret) {
 
 };*/
+
+void encodeFile(int argc, char const ** argv){
+	char message[255];
+	int i;
+
+	FILE * f = fopen(argv[2], "r");
+	if(f == NULL){
+		fprintf(stderr," steg: Error - Unable to open the file '%s' .\n", argv[2]);
+		exit(0);
+	}
+
+  PPM im = getPPM(f);
+	fprintf(stderr, "Message to Encode-> ");
+	fgets(message, 255, stdin);
+
+	i = strlen(message) - 1;
+	if(message[i] == '\n')
+		message[i] = '\0';
+
+	fprintf(stderr, "encoding in progress...\n");
+
+	//encode ppm
+  writePPM(f, &im);
+	showPPM(&im);
+}
 
 /*
   Main method which calls PPM functions for usage.
@@ -184,6 +263,7 @@ int main(int argc, char *argv[]) {
   FILE* f = fopen(argv[1], "r");
   PPM ppm = getPPM(f);
   fprintf(stderr, "%s\n", "Stenagography Program");
+  writePPM(f, &ppm);
   showPPM(&ppm);
   fclose(f);
   return 0;
