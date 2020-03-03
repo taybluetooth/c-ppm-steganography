@@ -3,228 +3,224 @@
 #include <string.h>
 #include <time.h>
 
-typedef struct PIXEL{
+typedef struct pixel{
 	int r, g, b;
-} PIXEL;
+} pixel;
 
 /* text struct holds strings of comments */
-typedef struct TEXT {
+typedef struct text {
 	char * text;
 	struct text * next;
-} TEXT;
+} text;
 
 struct PPM {
-	char * format;
-	struct text * comment;
+	char * type;
+	struct text * text;
 	int cn;
-	int width, height, max;
-	struct pixel ** pixels;
+	int w, h, max;
+	struct pixel ** p;
 };
 
+/* readLine used from Lab 3 */
 char * readLine(FILE * f){
 
-	char buffer[255];
 	int i, j;
 	char character;
 	char * line;
+	char buffer[255];
 
 	i = 0;
 	character = getc(f);
-	if (character == EOF)
+
+	if (character == EOF) {
 		return NULL;
-	while (character !='\n' && i < (255 -1)){
-		buffer[i] = ch;
+	}
+	while (character != '\n' && i < (255 -1 )) {
+		buffer[i] = character;
 		i++;
 		character = getc(f);
 	}
 
-	if (character != '\n')
-		while (ch != '\n')
+	if (character != '\n') {
+		while (character != '\n') {
 			character = getc(f);
-	buffer[i] = '\0';
-	line = malloc((i+1) * sizeof(char));
+		}
 
-	for (j = 0; j <= i; k++)
-		line[i] = buffer[j];
-		line[i] = '\0';
+		buffer[i] = '\0';
+		line = malloc((i+1) * sizeof(char));
 
-	return line;
-	free(buffer);
+		for (j = 0; j <= i; j++) {
+			line[i] = buffer[i];
+			line[i] = '\0';
+		}
+
+		return line;
+		free(buffer);
+	}
 }
-
 
 /* showPPM prints information stored in PPM struct
  * in the given structural format
  */
-showPPM (struct PPM * im){
 
-  //print format
-  printf("%s\n", im->format);
+void showPPM (struct PPM * im) {
 
-  //print text
-  int count;
-  struct text * text = im->comment;
-  printf("%s\n", im->comment->text);
-  for(j = 1; j<i->cn; j++){
-          text = text->next;
-          printf("%s\n", text->text);
-  }
+	int i;
+	printf("%s\n", "P3");
 
-  //print general info
-  printf("%d\n", im->width);
-  printf("%d\n", im->height);
-  printf("%d\n", im->max);
+	printf("%d %d\n", im -> w, im -> h);
+	printf("%d\n", im -> max);
 
-  //print pixels
-  int i, j;
-  for(i = 0; i < im -> height; i++){
-    for(j = 0; j < im -> width; j++){
-      struct pixel p = im->pixels[i][j];
-      printf("%i %i %i\n", p.r, p.g, p.b);
-    }
-  }
+	int j, k;
+	for(j = 0; j < im -> h; j++) {
+		for(k = 0; k < im -> w; k++) {
+	  	struct pixel p = im -> p[j][k];
+	    printf("%i %i %i\n", p.r, p.g, p.b);
+	  }
+	}
 }
 
 
 /* Utilizes the above readLine function to find the comments */
-void getText(FILE * f, struct PPM * im){
+void getText(FILE * f, struct PPM * im) {
 	char character = getc(f);
-	while(character == '#') //lines beginning with "#" character
-	{
+	while(character == '#') {
 		ungetc(character, f);
-
 		//get comment
 		char * line = readLine(f);
-
 		//add comment to linked list
-		if(im->cn == 0) {
-			im->comment = (struct text * )malloc(sizeof(struct text));
-			im->comment->text = line;
-			im->cn = 1;
+		if(im -> cn == 0) {
+			im -> text = (struct text * )malloc(sizeof(struct text));
+			im -> text->text = line;
+			im -> cn = 1;
 		}
+
 		else {
 			//previous comments
 			int i;
-			struct text * current = im->comment;
+			struct text * current = im->text;
 
 			for(i = 1; i < im -> cn; i++) {
-  			current = current -> next;
-  			current -> next = (struct text *)malloc(sizeof(struct text));
-			  current -> next -> text = line;
-			  im -> cn = im->cn + 1;
+				current = current -> next;
+			}
+			current -> next = (struct text *)malloc(sizeof(struct text));
+			current -> next -> text = line;
+			im -> cn = im -> cn + 1;
 		}
-
+		//move to next line
 		character = getc(f);
 	}
-
 	//Restore to starting position
 	ungetc(character, f);
 }
 
-void getPixels(FILE * f, struct PPM * im){
+void getPixels(FILE * f, struct PPM * im) {
 
 	//allocate rows
-	im-> pixels = (struct pixel ** ) malloc(sizeof(struct pixel *) * im -> height);
-
+	im -> p = (struct pixel ** ) malloc(sizeof(struct pixel *) * im -> h);
 	int i, j;
-	for(i = 0; i < im -> height; i++) {
+
+	for(i = 0; i < im -> h; i++) {
 		//allocate columns
-		im -> pixels[j] = (struct pixel * ) malloc(sizeof(struct pixel) * im -> width);
-		for (j = 0; j < im -> width; j++) {
+		im -> p[i] = (struct pixel * ) malloc(sizeof(struct pixel) * im -> w);
+		for(j = 0; j < im -> w; j++) {
 			//get pixels for each
-			fscanf (f, "%d", &(im -> pixels[i][j].r)); //get memory address
-			fscanf (f, "%d", &(im -> pixels[i][j].g));
-			fscanf (f, "%d", &(im -> pixels[i][j].b));
+			fscanf (f, "%d", &(im->p[i][j].r)); //get memory address
+			fscanf (f, "%d", &(im->p[i][j].g));
+			fscanf (f, "%d", &(im->p[i][j].b));
 		}
 	}
 }
 
 
 /* Return PPM image file from fin */
-struct PPM * getPPM(FILE * f){
-  struct PPM * im = malloc(sizeof(struct PPM));
+struct PPM * getPPM(FILE * f) {
+	struct PPM * im = malloc(sizeof(struct PPM));
+	//Type
+	im -> type = malloc(2*sizeof(char));
+	im -> type = readLine(f);
+	im -> cn = 0;
+	getText(f, im);
 
-  //Type
-  im->type = malloc(2*sizeof(char));
-  im->type = readLine(f);
+	//Size
+	fscanf (f, "%d", &im -> w);
+	fscanf (f, "%d", &im -> h);
+	fscanf (f, "%d", &im -> max);
 
-  im -> cn = 0;
-  getText(f, im);
+	//Pixels
+	getPixels(f, im);
 
-  //Size
-  fscanf (f, "%d", &im -> width);
-  fscanf (f, "%d", &im -> height);
-  fscanf (f, "%d", &im -> max);
-
-  //Pixels
-  getPixels(f, im);
-
-  return im;
+	return im;
 }
 
 /* Return PPM image i with message (hidden within r field) */
-struct PPM * encode (struct PPM * im, char * message, unsigned int mSize, unsigned intsecret){
-        srand(time(NULL)); //Randomize seed. Seed set to current time.
-        int i, width, sum, random;
+struct PPM * encode (char * txt, struct PPM * im)  {
+	srand(time(NULL)); //Randomize seed. Seed set to current time.
+	int i, len, sum, w, random;
 
-        width = im -> width;
-        sum = 0;
+	w = im -> w;
+	sum = 0;
+	len = strlen(txt);
 
-        //Check for compatability
-        if((mSize * 75) < (width * im -> height)){
-          printf("steg: File is appropriate for encoding. \n");
-        }
-        else {
-          printf("steg: Error- Image size not acceptable. \n");
-          exit(0);
-        }
+	//Check for compatability
+	if((len * 75) < (w * im->h)) {
+	  printf("steg: File is appropriate for encoding. \n");
+	}
+	else {
+	  printf("steg: Error- Image size not acceptable. \n");
+	  exit(0);
+	}
 
-        //for each char
-        for (i = 0; i < mSize;) {
-          random = (rand() % 100);
-          sum = sum + random;
+	//for each char
+	for(i = 0; i < len;) {
+	  random = (rand() % 100);
+	  sum = sum + random;
+    //calc the pixel in terms of row and col
+		int row, column;
+    row = sum / (w);
+    column = sum - (row * w);
 
-          //calc the pixel in terms of row and col
-		      int row, column;
-          row = sum / (width);
-          column = sum - (row * width);
+    //get pixel
+    struct pixel * p = &(im->p[row][column]); //Use memory address
 
-          //get pixel
-          struct pixel * pixel = &(im->pixels[row][column]); //Use memory address
+    //check red pixel val != asci of letter encoded
+    if(txt[i] != p->r) {
+	    p->r = txt[i];
+	    i++;
+    }
+    else {
+    	fprintf(stderr, "%s\n", "Retrying");
+		}
 
-          //check red pixel val != asci of letter encoded
-          if(message[i] != pixel -> r){
-            pixel -> r = message[i];
-            i++;
-          }
-          else {
-            fprintf(stderr, "%s\n", "Retrying");
-          }
-  }
-  return i;
+	}
+
+	return im;
 }
 
-void writePPM(FILE * f, struct PPM * im, const char *fileName){
-	FILE *pfile = NULL;
-	int x,y;
+void writePPM(FILE * f, struct PPM * im, const char *fileName) {
+
+	FILE *output = NULL;
+	int i,j;
 
 	output = fopen(fileName, "w");
-	fprintf(output, "P3\n%d %d\n255\n", i->w, i->h);
+	fprintf(output, "P3\n%d %d\n255\n", im -> w, im -> h);
 
-	for(i = 0; i < im -> height; i++) {
-		for(j = 0; j < im -> width; j++){
-			struct pixel pixel = im -> pixels[x][y];
-			fprintf(output, "%i %i %i \n", pixel.r, pixel.g, pixel.b);		}
+	for(i = 0; i < im -> h; i++) {
+		for(j = 0; j < im -> w; j++) {
+			struct pixel p = im -> p[i][j];
+			fprintf(output, "%i %i %i \n", p.r, p.g, p.b);		}
 	}
+
 	fclose(output);
 }
 
 
-char * decode(struct PPM * i1, struct PPM * i2){
+char * decode(struct PPM * im1, struct PPM * im2) {
+
 	char * buffer = malloc(sizeof(char) * 255);
 
 	//confirm that the files are the 'same'
-	if(!(i1->h == i2->h && i1->w == i2->w)){
+	if(!(im1 -> h == im2 -> h && im1 -> w == im2 -> w)){
 		printf("steg: Error - PPM files do not match. \n");
 		exit(0);
 	}
@@ -233,13 +229,13 @@ char * decode(struct PPM * i1, struct PPM * i2){
 	l = 0;
 
 	//for each row
-	for(j=0;j<i2->h;j++){
+	for(j = 0; j < im2 -> h; j++) {
 		//for each column
-		for(k=0;k<i2->w;k++){
+		for(k = 0; k < im2 -> w; k++) {
 			//check if red pixels are not equal
-			if(i2->p[j][k].r != i1->p[j][k].r)
+			if(im2 -> p[j][k].r != im1 -> p[j][k].r)
 				//get encoded char
-				buffer[l] = i2->p[j][k].r;
+				buffer[l] = im2 -> p[j][k].r;
 				printf("%c", buffer[l]);
 				l = l+1;
 		}
@@ -247,13 +243,15 @@ char * decode(struct PPM * i1, struct PPM * i2){
 
 	//return txt
 	m = strlen(buffer) - 1;
-	if (buffer[m] == '\n')
+	if (buffer[m] == '\n') {
 		buffer[m] = '\0';
+	}
 
-	char * str = malloc(sizeof(char) * (m+1));
+	char * str = malloc(sizeof(char) * (m + 1));
 
-	for(n=0; n<(m+1); n++)
+	for(n = 0; n < (m + 1); n++) {
 		str[n] = buffer[n];
+	}
 
 	free(buffer);
 	return str;
@@ -261,58 +259,59 @@ char * decode(struct PPM * i1, struct PPM * i2){
 }
 
 
-void encodeFile(int argc, char const ** argv){
+void encodeFile(int argc, char const ** argv) {
 	char txt[255];
-	int j;
-	//FILE * outFin;
+	char secret[10];
+	int i;
 
-	//outFin = fopen("modified.ppm", "w");
-
-	FILE * fin = fopen(argv[2], "r");
-	if(fin == NULL){
+	FILE * f = fopen(argv[2], "r");
+	if(f == NULL){
 		fprintf(stderr," steg: Error - Unable to open the file '%s' .\n", argv[2]);
 		exit(0);
 	}
 
-	struct PPM * i = getPPM(fin);
+	struct PPM * im = getPPM(f);
 
 	//get txt
 	fprintf(stderr, "Message to Encode-> ");
 	fgets(txt, 255, stdin);
+	fprintf(stderr, "Secret to Decode (integer)-> ");
+	fgets(secret, 10, stdin);
 
-	j = strlen(txt) - 1;
-	if(txt[j] == '\n')
-		txt[j] = '\0';
-
-	fprintf(stderr, "encoding in progress...\n");
+	i = strlen(txt) - 1;
+	if(txt[i] == '\n')
+		txt[i] = '\0';
 
 	//encode ppm
-	encode(txt, i);
+	encode(txt, im);
 
 	//output ppm
 	//fputc(showPPM, outFin);
-	writePPM(fin, i, "modified.ppm");
-	showPPM(i);
+	writePPM(f, im, argv[3]);
+	showPPM(im);
+
+	fprintf(stderr, "PPM Encoding Finished.\n");
+	fprintf(stderr, "%s %s", "Secret To Decode Is", secret);
 }
 
 void decodeFile(int argc, char const ** argv){
 
-	FILE * i1 = fopen(argv[2], "r");
-	FILE * i2 = fopen(argv[3], "r");
+	FILE * im1 = fopen(argv[2], "r");
+	FILE * im2 = fopen(argv[3], "r");
 
-	if(i1 == NULL){
+	if(im1 == NULL){
 		printf("steg: Error - File '%s' could not be opened. \n", argv[2]);
 		exit(0);
 	}
 
-	if(i2 == NULL){
+	if(im2 == NULL){
 		printf("steg: Error - File '%s' could not be opened. \n", argv[3]);
 		exit(0);
 	}
 
 	//get files
-	struct PPM * oPPM = getPPM(i1);
-	struct PPM * ePPM = getPPM(i2);
+	struct PPM * oPPM = getPPM(im1);
+	struct PPM * ePPM = getPPM(im2);
 
 	//get encoded txt
 	char * str = decode(oPPM, ePPM);
@@ -323,31 +322,11 @@ void decodeFile(int argc, char const ** argv){
 
 int main (int argc, char const *argv[]){
 
-	//check argv
-	if(argc < 3){
-		printf("steg: Improper use of steg\n");
-		printf("Use either:  ./steg e <file1.ppm>\n");
-		printf("             ./steg d <file1.ppm> <file2.ppm>\n");
-		exit(0);
-	}
-
 	if(argv[1][0] == 'e'){
 		encodeFile(argc, argv);
 	}
 	else if(argv[1][0] == 'd'){
-		if(argc != 4){
-			printf("steg: Improper use of steg\n");
-                	printf("Use either:  ./steg e <file1.ppm>\n");
-                	printf("             ./steg d <file1.ppm> <file2.ppm>\n");
-                	exit(0);
-		}
 		decodeFile(argc, argv);
-	}
-	else{
-		printf("steg: Improper use of steg\n");
-                printf("Use either:  ./steg e <file1.ppm>\n");
-                printf("             ./steg d <file1.ppm> <file2.ppm>\n");
-                exit(0);
 	}
 
 	return 0;
