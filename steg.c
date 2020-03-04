@@ -3,25 +3,49 @@
 #include <string.h>
 #include <time.h>
 
+/*
+	Structure which holds rgb values for
+	each individual pixel.
+*/
+
 typedef struct pixel{
 	int r, g, b;
 } pixel;
 
-/* text struct holds strings of comments */
+/*
+	Structure which holds text intended to be used
+	for PPM comments
+*/
+
 typedef struct text {
 	char * text;
 	struct text * next;
 } text;
 
+/*
+	Main PPM structure which hold all data of the PPM,
+	including the header info documenting the size and
+	max colour values as well as a 2D array holding every
+	pixel according to x and y coordinates.
+*/
+
 struct PPM {
-	char * type;
+	char * format;
 	struct text * text;
 	int cn;
-	int w, h, max;
-	struct pixel ** p;
+	int width, height, max;
+	struct pixel ** pixel;
+	unsigned int secret;
 };
 
-/* readLine used from Lab 3 */
+/*
+	Method which reads in a line from the PPM file
+	and each character is assigned to a buffer array.
+	This sequence will end when a new line is detected.
+	A line pointer is also declared using malloc to allocate
+	the memory appropriate for the size of the line.
+*/
+
 char * readLine(FILE * f){
 
 	int i, j;
@@ -59,36 +83,42 @@ char * readLine(FILE * f){
 	}
 }
 
-/* showPPM prints information stored in PPM struct
- * in the given structural format
- */
+/*
+	Method which converts PPM file to text and prints it to
+	the terminal, with a nested loop printing all pixels
+	respective colour values in the 2D array. Header information
+	is also printed out, including the width, height and max colour
+	values.
+*/
 
 void showPPM (struct PPM * im) {
 
 	int i;
 	printf("%s\n", "P3");
 
-	printf("%d %d\n", im -> w, im -> h);
+	printf("%d %d\n", im -> width, im -> height);
 	printf("%d\n", im -> max);
 
 	int j, k;
-	for(j = 0; j < im -> h; j++) {
-		for(k = 0; k < im -> w; k++) {
-	  	struct pixel p = im -> p[j][k];
-	    printf("%i %i %i\n", p.r, p.g, p.b);
+	for(j = 0; j < im -> height; j++) {
+		for(k = 0; k < im -> width; k++) {
+	  	struct pixel pixel = im -> pixel[j][k];
+	    printf("%i %i %i\n", pixel.r, pixel.g, pixel.b);
 	  }
 	}
 }
 
+/*
+	Method which extracts comments by using the readline method,
+	and assigning each line to the linked list of text that forms a single
+	comment. This function is also used by getPPM.
+*/
 
-/* Utilizes the above readLine function to find the comments */
 void getText(FILE * f, struct PPM * im) {
 	char character = getc(f);
 	while(character == '#') {
 		ungetc(character, f);
-		//get comment
 		char * line = readLine(f);
-		//add comment to linked list
 		if(im -> cn == 0) {
 			im -> text = (struct text * )malloc(sizeof(struct text));
 			im -> text->text = line;
@@ -96,7 +126,6 @@ void getText(FILE * f, struct PPM * im) {
 		}
 
 		else {
-			//previous comments
 			int i;
 			struct text * current = im->text;
 
@@ -107,85 +136,91 @@ void getText(FILE * f, struct PPM * im) {
 			current -> next -> text = line;
 			im -> cn = im -> cn + 1;
 		}
-		//move to next line
 		character = getc(f);
 	}
-	//Restore to starting position
 	ungetc(character, f);
 }
 
+/*
+	Method which allocates rows and columns using memory allocation of the PPM's
+	respective height and width, then scanning every individual pixels' rgb values
+	and assigning them to the pixel structure, which in turn is stored in a 2D array
+	according to the row and column it was found in.
+*/
+
 void getPixels(FILE * f, struct PPM * im) {
 
-	//allocate rows
-	im -> p = (struct pixel ** ) malloc(sizeof(struct pixel *) * im -> h);
+	im -> pixel = (struct pixel ** ) malloc(sizeof(struct pixel *) * im -> height);
 	int i, j;
 
-	for(i = 0; i < im -> h; i++) {
-		//allocate columns
-		im -> p[i] = (struct pixel * ) malloc(sizeof(struct pixel) * im -> w);
-		for(j = 0; j < im -> w; j++) {
-			//get pixels for each
-			fscanf (f, "%d", &(im->p[i][j].r)); //get memory address
-			fscanf (f, "%d", &(im->p[i][j].g));
-			fscanf (f, "%d", &(im->p[i][j].b));
+	for(i = 0; i < im -> height; i++) {
+		im -> pixel[i] = (struct pixel * ) malloc(sizeof(struct pixel) * im -> width);
+		for(j = 0; j < im -> width; j++) {
+			fscanf (f, "%d", &(im->pixel[i][j].r));
+			fscanf (f, "%d", &(im->pixel[i][j].g));
+			fscanf (f, "%d", &(im->pixel[i][j].b));
 		}
 	}
 }
 
+/*
+	Method which uses the getText and getPixels methods, as well as reading header
+	information to parse together a structure for a PPM file,
+	which is subsequently returned.
+*/
 
-/* Return PPM image file from fin */
 struct PPM * getPPM(FILE * f) {
 	struct PPM * im = malloc(sizeof(struct PPM));
-	//Type
-	im -> type = malloc(2*sizeof(char));
-	im -> type = readLine(f);
+	im -> format = malloc(2*sizeof(char));
+	im -> format = readLine(f);
 	im -> cn = 0;
 	getText(f, im);
 
-	//Size
-	fscanf (f, "%d", &im -> w);
-	fscanf (f, "%d", &im -> h);
+	fscanf (f, "%d", &im -> width);
+	fscanf (f, "%d", &im -> height);
 	fscanf (f, "%d", &im -> max);
 
-	//Pixels
 	getPixels(f, im);
 
 	return im;
 }
 
-/* Return PPM image i with message (hidden within r field) */
-struct PPM * encode (char * txt, struct PPM * im)  {
-	srand(time(NULL)); //Randomize seed. Seed set to current time.
-	int i, len, sum, w, random;
+/*
+	Helper method for encoding PPM file. Utilises C's random method
+	and time to generate a seed which the randomisation will be based
+	upon. This random number is used to choose the next pixel, of which
+	only the red value is impacted, this makes it easier as red is
+	the first value in any RGB format.
+	Bit shifting is then done using this random number.
+*/
 
-	w = im -> w;
+struct PPM * encode (char * txt, struct PPM * im)  {
+	srand(time(NULL));
+	int i, len, sum, width, random;
+
+	width = im -> width;
 	sum = 0;
 	len = strlen(txt);
 
-	//Check for compatability
-	if((len * 75) < (w * im->h)) {
-	  printf("steg: File is appropriate for encoding. \n");
+	if((len * 75) < (width * im->height)) {
+	  printf("File is appropriate for encoding. \n");
 	}
 	else {
-	  printf("steg: Error- Image size not acceptable. \n");
+	  printf("Error- Image size not acceptable. \n");
 	  exit(0);
 	}
 
-	//for each char
 	for(i = 0; i < len;) {
 	  random = (rand() % 100);
 	  sum = sum + random;
-    //calc the pixel in terms of row and col
 		int row, column;
-    row = sum / (w);
-    column = sum - (row * w);
+    row = sum / (width);
+    column = sum - (row * width);
 
-    //get pixel
-    struct pixel * p = &(im->p[row][column]); //Use memory address
+    struct pixel * pixel = &(im->pixel[row][column]);
 
-    //check red pixel val != asci of letter encoded
-    if(txt[i] != p->r) {
-	    p->r = txt[i];
+    if(txt[i] != pixel->r) {
+	    pixel->r = txt[i];
 	    i++;
     }
     else {
@@ -197,60 +232,73 @@ struct PPM * encode (char * txt, struct PPM * im)  {
 	return im;
 }
 
+/*
+	Method which writes a PPM file to an output PPM file after reading
+	the text information. Output file name is taken as a parameter.
+*/
+
 void writePPM(FILE * f, struct PPM * im, const char *fileName) {
 
 	FILE *output = NULL;
 	int i,j;
 
-	output = fopen(fileName, "w");
-	fprintf(output, "P3\n%d %d\n255\n", im -> w, im -> h);
+	output = fopen(fileName, "width");
+	fprintf(output, "P3\n%d %d\n255\n", im -> width, im -> height);
 
-	for(i = 0; i < im -> h; i++) {
-		for(j = 0; j < im -> w; j++) {
-			struct pixel p = im -> p[i][j];
-			fprintf(output, "%i %i %i \n", p.r, p.g, p.b);		}
+	for(i = 0; i < im -> height; i++) {
+		for(j = 0; j < im -> width; j++) {
+			struct pixel pixel = im -> pixel[i][j];
+			fprintf(output, "%i %i %i \n", pixel.r, pixel.g, pixel.b);		}
 	}
 
 	fclose(output);
 }
 
+/*
+	Helper method which decodes the encoded PPM file.
+	Checks to see if the original PPM file and the encoded one have the same height
+	so the skipping of pixels when decoding it is successful.
+	Also reads in a secret however this is buggy and I have not successfully debugged yet.
+*/
 
-char * decode(struct PPM * im1, struct PPM * im2) {
+char * decode(struct PPM * im1, struct PPM * im2, unsigned int secret) {
 
-	char * buffer = malloc(sizeof(char) * 255);
+	char * buffer = malloc(sizeof(char) * 100);
 
-	//confirm that the files are the 'same'
-	if(!(im1 -> h == im2 -> h && im1 -> w == im2 -> w)){
-		printf("steg: Error - PPM files do not match. \n");
+	if(!(im1 -> height == im2 -> height && im1 -> width == im2 -> width)){
+		printf("Error - PPM files do not match. \n");
 		exit(0);
 	}
 
-	int j, k, l, m, n;
-	l = 0;
+	// bug
+	// needs repaired, explain at demo.
+	/*if(!(secret == im2 -> secret)) {
+		printf("Error - The Secret You Have Provided Is Incorrect. \n");
+		exit(0);
+	}*/
 
-	//for each row
-	for(j = 0; j < im2 -> h; j++) {
-		//for each column
-		for(k = 0; k < im2 -> w; k++) {
-			//check if red pixels are not equal
-			if(im2 -> p[j][k].r != im1 -> p[j][k].r)
-				//get encoded char
-				buffer[l] = im2 -> p[j][k].r;
-				printf("%c", buffer[l]);
-				l = l+1;
+	int i, j, k, l, m;
+	k = 0;
+
+	for(i = 0; i < im2 -> height; i++) {
+		for(j = 0; j < im2 -> width; j++) {
+			if(im2 -> pixel[i][j].r != im1 -> pixel[i][j].r) {
+				buffer[k] = im2 -> pixel[i][j].r;
+				printf("%c", buffer[k]);
+				k = k + 1;
+			}
 		}
 	}
 
-	//return txt
-	m = strlen(buffer) - 1;
-	if (buffer[m] == '\n') {
-		buffer[m] = '\0';
+	l = strlen(buffer) - 1;
+	if (buffer[l] == '\n') {
+		buffer[l] = '\0';
 	}
 
-	char * str = malloc(sizeof(char) * (m + 1));
+	char * str = malloc(sizeof(char) * (l + 1));
 
-	for(n = 0; n < (m + 1); n++) {
-		str[n] = buffer[n];
+	for(m = 0; m < (l + 1); m++) {
+		str[m] = buffer[m];
 	}
 
 	free(buffer);
@@ -258,67 +306,83 @@ char * decode(struct PPM * im1, struct PPM * im2) {
 
 }
 
+/*
+	Main encoding function which is executed by the argv[1] letter e.
+	Uses the encode helper method. Implemented robustness if file cannot
+	be opened. Prompts for a message and secret once verification has passed
+	that file can be encoded.
+*/
 
 void encodeFile(int argc, char const ** argv) {
-	char txt[255];
-	char secret[10];
+	char txt[100];
 	int i;
 
 	FILE * f = fopen(argv[2], "r");
 	if(f == NULL){
-		fprintf(stderr," steg: Error - Unable to open the file '%s' .\n", argv[2]);
+		fprintf(stderr,"Error - Unable to open the file");
 		exit(0);
 	}
 
 	struct PPM * im = getPPM(f);
 
-	//get txt
-	fprintf(stderr, "Message to Encode-> ");
-	fgets(txt, 255, stdin);
-	fprintf(stderr, "Secret to Decode (integer)-> ");
-	fgets(secret, 10, stdin);
+	fprintf(stderr, "Message to Encode: ");
+	fgets(txt, 100, stdin);
+	fprintf(stderr, "Secret to Decode (integer): ");
+	scanf("%u", &im->secret);
 
 	i = strlen(txt) - 1;
 	if(txt[i] == '\n')
 		txt[i] = '\0';
 
-	//encode ppm
 	encode(txt, im);
 
-	//output ppm
-	//fputc(showPPM, outFin);
 	writePPM(f, im, argv[3]);
 	showPPM(im);
 
 	fprintf(stderr, "PPM Encoding Finished.\n");
-	fprintf(stderr, "%s %s", "Secret To Decode Is", secret);
+	fprintf(stderr, "%s %u\n", "Secret To Decode Is", im->secret);
 }
 
+/*
+	Main decoding function which is executed by the argv[1] letter d.
+	Uses the encode helper method. Implemented robustness if file cannot
+	be opened. Prompts for a message and secret once verification has passed
+	that file can be encoded. Takes in the original PPM file and the encoded file
+	then proceeds to pass these to the helper function.
+*/
+
 void decodeFile(int argc, char const ** argv){
+
+	unsigned int secret;
+
+	fprintf(stderr, "Secret to Decode (integer)-> ");
+	scanf("%u", &secret);
 
 	FILE * im1 = fopen(argv[2], "r");
 	FILE * im2 = fopen(argv[3], "r");
 
 	if(im1 == NULL){
-		printf("steg: Error - File '%s' could not be opened. \n", argv[2]);
+		printf("Error - File '%s' could not be opened. \n", argv[2]);
 		exit(0);
-	}
+	};
 
 	if(im2 == NULL){
-		printf("steg: Error - File '%s' could not be opened. \n", argv[3]);
+		printf("Error - File '%s' could not be opened. \n", argv[3]);
 		exit(0);
-	}
+	};
 
-	//get files
 	struct PPM * oPPM = getPPM(im1);
 	struct PPM * ePPM = getPPM(im2);
 
-	//get encoded txt
-	char * str = decode(oPPM, ePPM);
-
-	//print txt
+	char * str = decode(oPPM, ePPM, secret);
 	printf("%s\n", str);
+
 }
+
+/*
+	Main method which checks arguments for e and d, encoding and
+	decoding respectively.
+*/
 
 int main (int argc, char const *argv[]){
 
